@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO; // Добавлено для StreamReader и File
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
@@ -21,7 +22,7 @@ namespace lab2_ver2
 
         int shaderHandle;
 
-        public int GetShader() { 
+        public int GetShader() {
             return shaderHandle;
         }
         public static string LoadShaderSource(string filepath)
@@ -29,15 +30,16 @@ namespace lab2_ver2
             string shaderSource = "";
             try
             {
-                using (StreamReader reader = new
-                StreamReader("../../../Shaders/" + filepath))
+                
+                string fullPath = Path.Combine(AppContext.BaseDirectory, "../../../Shaders", filepath);
+                using (StreamReader reader = new StreamReader(fullPath))
                 {
                     shaderSource = reader.ReadToEnd();
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to load shader source file:" + e.Message);
+                Console.WriteLine("Failed to load shader source file: " + filepath + " - " + e.Message);
             }
             return shaderSource;
         }
@@ -84,88 +86,15 @@ namespace lab2_ver2
             GL.DeleteShader(fragmentShader);
         }
 
-        
+
     }
     internal class Game : GameWindow
     {
         int width, height;
 
-        //float[] vertices = {
-        //    -0.5f, 0.5f, 0f, // top left vertex - 0
-        //    0.5f, 0.5f, 0f, // top right vertex - 1
-        //    0.5f, -0.5f, 0f, // bottom right vertex - 2
-        //    -0.5f, -0.5f, 0f // bottom left vertex - 3
-        //};
-
-        uint[] indices =
-        {
-            // Передняя грань
-            0, 1, 2, //top triangle
-            2, 3, 0, //bottom triangle
-
-            // Правая грань
-            4, 5, 6, 
-            6, 7, 4,
-
-            // Задняя грань
-            8, 9, 10,
-            10, 11, 8,
-
-            // Левая грань
-            12, 13, 14,
-            14, 15, 12,
-
-            // Верхняя грань
-            16, 17, 18, 
-            18, 19, 16,
-
-            // Нижняя грань
-            20, 21, 22, 
-            22, 23, 20
-
-        };
-
-        //float[] texCoords =
-        //{
-        //    0f, 1f, 
-        //    1f, 1f,
-        //    1f, 0f,
-        //    0f, 0f
-        //};
-        List<Vector2> texCoords = new List<Vector2>()
-        {
-            //передняя грань
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 0f),
-
-            //правая гарнь
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 0f),
-
-            //левая грань
-            new Vector2(1f, 1f),
-            new Vector2(0f, 1f),
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-
-            //верхняя грань
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 0f),
-
-            //нижняя грань
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 0f),
-
-        };
-
+        List<Vector3> sphereVertices;
+        List<Vector2> sphereTexCoords;
+        List<uint> sphereIndices;
 
         int VAO;
         int VBO;
@@ -173,51 +102,13 @@ namespace lab2_ver2
         int EBO;
 
         int textureID;
-        int textureVBO;
+        int textureVBO; 
 
         float yRot = 0f;
         float rotationSpeed = MathHelper.DegreesToRadians(45.0f);
 
         Camera camera;
 
-        List<Vector3> vertices = new List<Vector3>()
-        {
-            //front face 0-3
-            new Vector3(-0.5f, 0.5f, 0.5f), //top-left vertice
-            new Vector3( 0.5f, 0.5f, 0.5f), //top-right vertice
-            new Vector3( 0.5f, -0.5f, 0.5f), //bottom-right vertice
-            new Vector3(-0.5f, -0.5f, 0.5f), //bottom-left vertice
-
-            // 4-7: Правая грань (X = 0.5)
-            new Vector3( 0.5f,  0.5f,  0.5f), // Верхняя-левая (была 1) (4)
-            new Vector3( 0.5f,  0.5f, -0.5f), // Верхняя-правая    (5)
-            new Vector3( 0.5f, -0.5f, -0.5f), // Нижняя-правая     (6)
-            new Vector3( 0.5f, -0.5f,  0.5f), // Нижняя-левая (была 2)  (7)
-
-            // 8-11: Задняя грань (Z = -0.5)
-            new Vector3( 0.5f,  0.5f, -0.5f), // Верхняя-левая (была 5) (8)
-            new Vector3(-0.5f,  0.5f, -0.5f), // Верхняя-правая    (9)
-            new Vector3(-0.5f, -0.5f, -0.5f), // Нижняя-правая     (10)
-            new Vector3( 0.5f, -0.5f, -0.5f), // Нижняя-левая (была 6) (11)
-
-            // 12-15: Левая грань (X = -0.5)
-            new Vector3(-0.5f,  0.5f, -0.5f), // Верхняя-левая (была 9) (12)
-            new Vector3(-0.5f,  0.5f,  0.5f), // Верхняя-правая (была 0) (13)
-            new Vector3(-0.5f, -0.5f,  0.5f), // Нижняя-правая (была 3) (14)
-            new Vector3(-0.5f, -0.5f, -0.5f), // Нижняя-левая (была 10) (15)
-
-            // 16-19: Верхняя грань (Y = 0.5)
-            new Vector3(-0.5f,  0.5f, -0.5f), // Верхняя-левая (была 9/12) (16)
-            new Vector3( 0.5f,  0.5f, -0.5f), // Верхняя-правая (была 5/8) (17)
-            new Vector3( 0.5f,  0.5f,  0.5f), // Нижняя-правая (была 1/4) (18)
-            new Vector3(-0.5f,  0.5f,  0.5f), // Нижняя-левая (была 0/13) (19)
-
-            // 20-23: Нижняя грань (Y = -0.5)
-            new Vector3(-0.5f, -0.5f,  0.5f), // Верхняя-левая (была 3/14) (20)
-            new Vector3( 0.5f, -0.5f,  0.5f), // Верхняя-правая (была 2/7) (21)
-            new Vector3( 0.5f, -0.5f, -0.5f), // Нижняя-правая (была 6/11) (22)
-            new Vector3(-0.5f, -0.5f, -0.5f)  // Нижняя-левая (была 10/15)(23)
-        };
 
 
         public Game(int width, int height) : base(GameWindowSettings.Default, NativeWindowSettings.Default)
@@ -228,69 +119,159 @@ namespace lab2_ver2
 
         }
 
-        
+        //создание сферы 
+        private void GenerateSphere(float radius, out List<Vector3> vertices, out List<Vector2> texCoords,
+       out List<uint> indices, int sectorCount, int stackCount)  //int sectorCount, int stackCount -- широта и долгота.
+                                                                 //Делают сферу более гладкой. Разбивает ее на
+                                                                 //прямоугольники--> треугольники
+        {
+            vertices = new List<Vector3>();
+            texCoords = new List<Vector2>();
+            indices = new List<uint>();
+
+            float x, y, z, xy;  //хранение координат текущей вершины. xy -- проекция радиуса
+                                //float nx, ny, nz, lengthInv = 1.0f / radius; // нормали
+            float s, t; // //хранения текстурных координат. t-- vertikal, s -- gorizont
+            float sectorStep = 2 * MathF.PI / sectorCount; // угловой шаг между секторами
+            float stackStep = MathF.PI / stackCount; //угловой шаг между слоями
+            float sectorAngle, stackAngle;// текущий угол сектора и слоя
+
+            for (int i = 0; i <= stackCount; i++) // от верхнего полюса к нижнему. по слоям ()
+            {
+                stackAngle = MathF.PI / 2 - i * stackStep;
+                xy = radius * MathF.Cos(stackAngle);
+                z = radius * MathF.Sin(stackAngle);
+
+                // по секторам
+                for (int j = 0; j <= sectorCount; j++)
+                {
+                    sectorAngle = j * sectorStep;
+
+                    x = xy * MathF.Cos(sectorAngle);
+                    y = xy * MathF.Sin(sectorAngle);
+                    vertices.Add(new Vector3(x, z, y));
+
+                    s = (float)j / sectorCount;
+                    t = (float)i / stackCount;
+
+                    texCoords.Add(new Vector2(s, t));
+
+
+                }
+            }
+
+            // Генерация индексов для сборки треугольников.
+            uint now, next; //хранения индексов вершин на текущем и следующем слоях.
+
+            for (int i = 0; i < stackCount; i++)
+            {
+                now = (uint)(i * (sectorCount + 1));
+                next = (uint)(now + (sectorCount + 1));
+
+                for (int j = 0; j < sectorCount; ++j, ++now, ++next)
+                {
+                    //Формируем два треугольника для каждого четырехугольника
+
+                    // Первый треугольник: (текущий слой, текущий сектор) -> (след. слой, текущий сектор)
+                    // -> (текущий слой, след. сектор)
+                    if (i != 0)
+                    { // Не создаем треугольники, примыкающие к самому верхнему полюсу
+
+                        //полюс
+                        indices.Add(now);
+                        indices.Add(next);
+                        indices.Add(now + 1);
+                    }
+
+                    //2 треуголбник. (текущий слой, след. сектор) -> (след. слой, текущий сектор)
+                    //-> (след. слой, след. сектор)
+                    if (i != (stackCount - 1))
+                    {
+
+                        indices.Add(now + 1);
+                        indices.Add(next);
+                        indices.Add(next + 1);
+
+                    }
+                }
+
+            }
+
+        }
+
+
+
+
+
         protected override void OnLoad()
         {
             base.OnLoad();
 
+            GenerateSphere(0.5f, out sphereVertices, out sphereTexCoords, out sphereIndices, 100, 95);
+
+            //загрузка текстуры
             textureID = GL.GenTexture();
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, textureID);
 
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
-            StbImage.stbi_set_flip_vertically_on_load(1);
-            ImageResult boxTexture = ImageResult.FromStream(File.OpenRead("../../../Textures/photo.jpg"),
-                ColorComponents.RedGreenBlueAlpha);
+            StbImage.stbi_set_flip_vertically_on_load(0);
+        ImageResult boxTexture = ImageResult.FromStream(File.OpenRead("../../../Textures/photo.jpg"),
+            ColorComponents.RedGreenBlueAlpha);
             GL.TexImage2D(TextureTarget.Texture2D, 0,
                 PixelInternalFormat.Rgba, boxTexture.Width, boxTexture.Height, 0,
                 PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture.Data);
+
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);//генерирует мипмап-уровни для текстуры.
+                                                              //Это набор уменьшенных копий текстуры.
+                                                              // Улучшает качество (убирает муар) и производительность.
+
             GL.BindTexture(TextureTarget.Texture2D, 0);
+
+        
+
 
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
 
             VBO = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Count * Vector3.SizeInBytes,
-                vertices.ToArray(), BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
-            //GL.EnableVertexArrayAttrib(VAO, 0);
-            //GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-            //GL.BindVertexArray(0);
-
-
-            EBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length *sizeof(uint),
-                indices, BufferUsageHint.StaticDraw);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+            GL.BufferData(BufferTarget.ArrayBuffer, sphereVertices.Count * Vector3.SizeInBytes, sphereVertices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0); // location = 0
+            GL.EnableVertexAttribArray(0);
 
 
             textureVBO = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, textureVBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, texCoords.Count * Vector2.SizeInBytes, texCoords.ToArray(), BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 0, 0);
-            GL.EnableVertexArrayAttrib(VAO, 1);
+            GL.BufferData(BufferTarget.ArrayBuffer, sphereTexCoords.Count * Vector2.SizeInBytes, sphereTexCoords.ToArray(), BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, 0); // location = 1
+            GL.EnableVertexAttribArray(1);
 
-            GL.EnableVertexArrayAttrib(VAO, 0);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-            GL.BindVertexArray(0);
 
+            // EBO для индексов
+            EBO = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO); // Привязываем EBO
+            GL.BufferData(BufferTarget.ElementArrayBuffer, sphereIndices.Count * sizeof(uint), 
+                sphereIndices.ToArray(), BufferUsageHint.StaticDraw);
+            // --- EBO остается привязанным, пока VAO привязан ---
+
+            // --- Отвязка ---
+            GL.BindVertexArray(0); // Отвязываем VAO (сохраняет состояние VBO и EBO)
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0); // Отвязываем ArrayBuffer (VBO)
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0); // Отвязываем ElementArrayBuffer (EBO)
 
             shader = new Shader();
             shader.LoadShader();
 
             GL.Enable(EnableCap.DepthTest);
 
-            camera = new Camera(width, height, Vector3.Zero);
-            //CursorState = CursorState.Grabbed;
+            camera = new Camera(width, height, new Vector3(0, 0, 3f));
 
-
+            CursorState = CursorState.Grabbed;
         }
 
         protected override void OnUnload()
@@ -299,6 +280,7 @@ namespace lab2_ver2
 
             GL.DeleteBuffer(VAO);
             GL.DeleteBuffer(VBO);
+            GL.DeleteBuffer(textureVBO);
             GL.DeleteBuffer(EBO);
             GL.DeleteTexture(textureID);
 
@@ -307,65 +289,84 @@ namespace lab2_ver2
 
         protected override void OnRenderFrame(FrameEventArgs args)
         {
+
+            base.OnRenderFrame(args);
+
             GL.ClearColor(0.8f, 0.7f, 0.9f, 1.0f);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             shader.UseShader();
+
+            GL.ActiveTexture(TextureUnit.Texture0); 
             GL.BindTexture(TextureTarget.Texture2D, textureID);
+            int texUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture0");
+            GL.Uniform1(texUniformLocation, 0);
+
             GL.BindVertexArray(VAO);
 
             //Transformation
-           
+
             Matrix4 model = Matrix4.CreateRotationY(yRot);
             Matrix4 view = camera.GetViewMatrix();
-            Matrix4 projection = camera.GetProjection();
-            Matrix4 translation = Matrix4.CreateTranslation(0f, 0f, -2f);
-            model *= translation;
+            Matrix4 projection = camera.GetProjectionMatrix();
+            
 
             int modelLocation = GL.GetUniformLocation(shader.GetShader(), "model");
             int viewLocation = GL.GetUniformLocation(shader.GetShader(), "view");
             int projectionLocation = GL.GetUniformLocation(shader.GetShader(), "projection");
 
-            GL.UniformMatrix4(modelLocation, true, ref model);
-            GL.UniformMatrix4(viewLocation, true, ref view);
-            GL.UniformMatrix4(projectionLocation, true, ref projection);
-           
+            GL.UniformMatrix4(modelLocation, false, ref model);
+            GL.UniformMatrix4(viewLocation, false, ref view);
+            GL.UniformMatrix4(projectionLocation, false, ref projection);
 
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
 
+
+            GL.DrawElements(PrimitiveType.Triangles, sphereIndices.Count, 
+                DrawElementsType.UnsignedInt, 0);
+
+            GL.BindVertexArray(0);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
             Context.SwapBuffers();
 
-            base.OnRenderFrame(args);
+            
         }
 
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
-            base.OnUpdateFrame(args);
+         
+
+            if (!IsFocused) // Не обновляем, если окно не в фокусе
+            {
+                return;
+            }
 
             yRot += rotationSpeed * (float)args.Time;
-            if (KeyboardState.IsKeyDown(Keys.Escape))
+
+            KeyboardState input = KeyboardState; // Получаем состояние клавиатуры
+            MouseState mouse = MouseState;     // Получаем состояние мыши
+
+            if (input.IsKeyDown(Keys.Escape))
             {
                 Close();
             }
 
-            MouseState mouse = MouseState;
-            KeyboardState input = KeyboardState;
-            base.OnUpdateFrame(args);
-            camera.Update(input, mouse, args);
+            camera.Update(input, mouse, args); // Обновляем камеру
 
+            base.OnUpdateFrame(args); 
         }
+
 
         protected override void OnResize(ResizeEventArgs e)
         {
             base.OnResize(e);
             GL.Viewport(0, 0, e.Width, e.Height);
+            // Обновляем размеры для камеры, чтобы соотношение сторон было правильным
             this.width = e.Width;
             this.height = e.Height;
+            if (camera != null) // Проверяем, что камера уже создана
+            {
+                 camera.UpdateScreenSize(e.Width, e.Height);
+            }
         }
-
-
     }
-
-    
 }
