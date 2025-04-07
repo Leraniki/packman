@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO; // Добавлено для StreamReader и File
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
@@ -95,6 +96,7 @@ namespace lab2_ver2
         List<Vector3> sphereVertices;
         List<Vector2> sphereTexCoords;
         List<uint> sphereIndices;
+        Vector3 sphereCenterCoords;
 
         int VAO;
         int VBO;
@@ -108,7 +110,24 @@ namespace lab2_ver2
         float rotationSpeed = MathHelper.DegreesToRadians(45.0f);
 
         Camera camera;
+        float cameraDistance = 4.0f;    // Расстояние от камеры до сферы
+        float cameraHeightOffset = 1.0f; // Насколько камера выше центра сферы
 
+        Vector3 front = -Vector3.UnitZ;
+        Vector3 right = Vector3.UnitX;
+        private float SPEED = 0.003f;
+
+
+        //дорога(?)
+        List<Vector3> roadVertices;
+        List<Vector2> roadTexCoords;
+        List<uint> roadIndices;
+
+        int roadVAO;
+        int roadVBO;
+        int roadEBO;
+        int roadtextureID;
+        int roadtextureVBO;
 
 
         public Game(int width, int height) : base(GameWindowSettings.Default, NativeWindowSettings.Default)
@@ -120,6 +139,7 @@ namespace lab2_ver2
         }
 
         //создание сферы 
+
         private void GenerateSphere(float radius, out List<Vector3> vertices, out List<Vector2> texCoords,
        out List<uint> indices, int sectorCount, int stackCount)  //int sectorCount, int stackCount -- широта и долгота.
                                                                  //Делают сферу более гладкой. Разбивает ее на
@@ -201,13 +221,42 @@ namespace lab2_ver2
 
 
 
+        private void GenerateRoad(float size, float yLevel, out List<Vector3> vertices, out List<Vector2> texCoords,
+       out List<uint> indices)
+        {
+            float halfSize = size / 2.0f;
 
+            vertices = new List<Vector3>
+            {
+            new Vector3(-halfSize, yLevel, -halfSize), // Нижний левый
+            new Vector3( halfSize, yLevel, -halfSize), // Нижний правый
+            new Vector3( halfSize, yLevel,  halfSize), // Верхний правый
+            new Vector3(-halfSize, yLevel,  halfSize)  // Верхний левый
+            };
+
+    
+            texCoords = new List<Vector2>
+            {
+            new Vector2(0.0f, 0.0f),
+            new Vector2(1.0f, 0.0f),
+            new Vector2(1.0f, 1.0f),
+            new Vector2(0.0f, 1.0f)
+            };
+
+            // Индексы для двух треугольников
+            indices = new List<uint>
+            {
+            0, 1, 2,  // Первый треугольник
+            0, 2, 3   // Второй треугольник
+            };
+
+        }
 
         protected override void OnLoad()
         {
             base.OnLoad();
 
-            GenerateSphere(0.5f, out sphereVertices, out sphereTexCoords, out sphereIndices, 100, 95);
+            GenerateSphere(0.5f, out sphereVertices, out sphereTexCoords, out sphereIndices, 36, 18);
 
             //загрузка текстуры
             textureID = GL.GenTexture();
@@ -261,17 +310,66 @@ namespace lab2_ver2
 
             // --- Отвязка ---
             GL.BindVertexArray(0); // Отвязываем VAO (сохраняет состояние VBO и EBO)
-            GL.BindBuffer(BufferTarget.ArrayBuffer, 0); // Отвязываем ArrayBuffer (VBO)
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0); // Отвязываем ElementArrayBuffer (EBO)
+
+
+
+            //**************ROAD*************
+            GenerateRoad(30.0f, -0.51f, out roadVertices, out roadTexCoords, out roadIndices);
+            roadtextureID = GL.GenTexture();
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2D, roadtextureID);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            StbImage.stbi_set_flip_vertically_on_load(0);
+
+            ImageResult boxTexture2 = ImageResult.FromStream(File.OpenRead("../../../Textures/labirint2.jpg"),
+                ColorComponents.RedGreenBlueAlpha);
+            GL.TexImage2D(TextureTarget.Texture2D, 0,
+                PixelInternalFormat.Rgba, boxTexture2.Width, boxTexture2.Height, 0,
+                PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture2.Data);
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+
+            roadVAO = GL.GenVertexArray();
+            GL.BindVertexArray(roadVAO);
+
+            roadVBO = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, roadVBO);
+            GL.BufferData(BufferTarget.ArrayBuffer, roadVertices.Count * Vector3.SizeInBytes, roadVertices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+            GL.EnableVertexAttribArray(0);
+
+            roadtextureVBO = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, roadtextureVBO);
+            GL.BufferData(BufferTarget.ArrayBuffer, roadTexCoords.Count * Vector2.SizeInBytes, roadTexCoords.ToArray(), BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, 0);
+            GL.EnableVertexAttribArray(1);
+
+            roadEBO = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, roadEBO);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, roadIndices.Count * sizeof(uint), roadIndices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindVertexArray(0);
+
+            // --- Отвязка ---
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
 
             shader = new Shader();
             shader.LoadShader();
 
             GL.Enable(EnableCap.DepthTest);
 
-            camera = new Camera(width, height, new Vector3(0, 0, 3f));
+           
+            Vector3 initialCameraPos = sphereCenterCoords - Vector3.UnitZ * cameraDistance 
+                + Vector3.UnitY * cameraHeightOffset;
+            camera = new Camera(width, height, initialCameraPos);
 
-            CursorState = CursorState.Grabbed;
+
+            //CursorState = CursorState.Grabbed;
         }
 
         protected override void OnUnload()
@@ -283,6 +381,12 @@ namespace lab2_ver2
             GL.DeleteBuffer(textureVBO);
             GL.DeleteBuffer(EBO);
             GL.DeleteTexture(textureID);
+
+            GL.DeleteBuffer(roadVBO);
+            GL.DeleteBuffer(roadtextureVBO);
+            GL.DeleteBuffer(roadEBO);
+            GL.DeleteVertexArray(roadVAO);
+            GL.DeleteTexture(roadtextureID);
 
             shader.DeleteShader();
         }
@@ -297,34 +401,50 @@ namespace lab2_ver2
 
             shader.UseShader();
 
-            GL.ActiveTexture(TextureUnit.Texture0); 
-            GL.BindTexture(TextureTarget.Texture2D, textureID);
-            int texUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture0");
-            GL.Uniform1(texUniformLocation, 0);
-
-            GL.BindVertexArray(VAO);
-
-            //Transformation
-
-            Matrix4 model = Matrix4.CreateRotationY(yRot);
-            Matrix4 view = camera.GetViewMatrix();
+           //*********************СФЕРА****************************
+            Matrix4 view = camera.GetViewMatrix(sphereCenterCoords);
             Matrix4 projection = camera.GetProjectionMatrix();
-            
 
             int modelLocation = GL.GetUniformLocation(shader.GetShader(), "model");
             int viewLocation = GL.GetUniformLocation(shader.GetShader(), "view");
             int projectionLocation = GL.GetUniformLocation(shader.GetShader(), "projection");
+            int texUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture0");
 
-            GL.UniformMatrix4(modelLocation, false, ref model);
-            GL.UniformMatrix4(viewLocation, false, ref view);
+            
             GL.UniformMatrix4(projectionLocation, false, ref projection);
+            GL.UniformMatrix4(viewLocation, false, ref view);
 
+            GL.ActiveTexture(TextureUnit.Texture0); 
+            GL.BindTexture(TextureTarget.Texture2D, textureID);
+            GL.Uniform1(texUniformLocation, 0);
 
+            Matrix4 spheremodel = Matrix4.CreateTranslation(sphereCenterCoords);
+            GL.UniformMatrix4(modelLocation, false, ref spheremodel);
 
-            GL.DrawElements(PrimitiveType.Triangles, sphereIndices.Count, 
-                DrawElementsType.UnsignedInt, 0);
+            GL.BindVertexArray(VAO);
+
+            GL.DrawElements(PrimitiveType.Triangles, sphereIndices.Count,
+               DrawElementsType.UnsignedInt, 0);
 
             GL.BindVertexArray(0);
+
+            //*********************ДОРОГА*************************  
+
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2D, roadtextureID);
+            GL.Uniform1(texUniformLocation, 1);
+
+            Matrix4 roadModel = Matrix4.Identity;
+            GL.UniformMatrix4(modelLocation, false, ref roadModel);
+
+            GL.BindVertexArray(roadVAO);
+            GL.DrawElements(PrimitiveType.Triangles, roadIndices.Count, DrawElementsType.UnsignedInt, 0);
+            GL.BindVertexArray(0);
+
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, 0);
             Context.SwapBuffers();
 
@@ -350,7 +470,34 @@ namespace lab2_ver2
                 Close();
             }
 
-            camera.Update(input, mouse, args); // Обновляем камеру
+            camera.UpdateRotation(mouse, args);
+
+            if (input.IsKeyDown(Keys.W))
+            {
+                sphereCenterCoords += front * SPEED;
+
+            }
+
+            if (input.IsKeyDown(Keys.A))
+            {
+                sphereCenterCoords -= right * SPEED;
+
+            }
+
+            if (input.IsKeyDown(Keys.S))
+            {
+                sphereCenterCoords -= front * SPEED;
+
+            }
+            if (input.IsKeyDown(Keys.D))
+            {
+                sphereCenterCoords += right * SPEED;
+
+            }
+
+            Vector3 targetCameraPosition = sphereCenterCoords - camera.front * cameraDistance + 
+                Vector3.UnitY * cameraHeightOffset;
+            camera.position = targetCameraPosition;
 
             base.OnUpdateFrame(args); 
         }

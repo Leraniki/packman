@@ -11,14 +11,13 @@ namespace lab2_ver2
 {
     internal class Camera
     {
-        private float SPEED = 3.0f; 
         private int SCREENWIDTH;
         private int SCREENHEIGHT;
         private float SENSITIVITY = 0.1f; 
         public Vector3 position;
         Vector3 up = Vector3.UnitY;
-        Vector3 front = -Vector3.UnitZ;
-        Vector3 right = Vector3.UnitX;
+        public Vector3 front = -Vector3.UnitZ;
+        public Vector3 right = Vector3.UnitX;
         private float pitch;
         private float yaw = -90.0f; 
         private bool firstMove = true;
@@ -33,9 +32,9 @@ namespace lab2_ver2
             lastPos = new Vector2(width / 2.0f, height / 2.0f);
         }
 
-        public Matrix4 GetViewMatrix()
+        public Matrix4 GetViewMatrix(Vector3 targetPosition)
         {
-            return Matrix4.LookAt(position, position + front, up);
+            return Matrix4.LookAt(position, targetPosition, up);
         }
         public Matrix4 GetProjectionMatrix()
         {
@@ -53,35 +52,10 @@ namespace lab2_ver2
         }
 
 
-        public void InputController(KeyboardState input, MouseState mouse, FrameEventArgs e)
+        public void UpdateRotation(MouseState mouse, FrameEventArgs e)
         {
-            float cameraSpeed = SPEED * (float)e.Time; // Скорость, зависящая от времени кадра
-
-            if (input.IsKeyDown(Keys.W))
-            {
-                position += front * cameraSpeed;
-            }
-            if (input.IsKeyDown(Keys.A))
-            {
-                position -= right * cameraSpeed;
-            }
-            if (input.IsKeyDown(Keys.S))
-            {
-                position -= front * cameraSpeed;
-            }
-            if (input.IsKeyDown(Keys.D))
-            {
-                position += right * cameraSpeed;
-            }
-            if (input.IsKeyDown(Keys.Space)) // Движение вверх
-            {
-                position += up * cameraSpeed;
-            }
-            if (input.IsKeyDown(Keys.LeftShift)) // Движение вниз
-            {
-                position -= up * cameraSpeed;
-            }
-
+            
+           
             // Управление мышью
             if (firstMove)
             {
@@ -103,9 +77,9 @@ namespace lab2_ver2
             UpdateVectors();
 
         }
-        public void Update(KeyboardState input, MouseState mouse, FrameEventArgs e)
+        public void Update(MouseState mouse, FrameEventArgs e)
         {
-            InputController(input, mouse, e);
+            UpdateRotation(mouse, e);
         }
 
         private void UpdateVectors()
