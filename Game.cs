@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using OpenTK.Audio.OpenAL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
@@ -252,14 +253,73 @@ namespace lab2_ver2
 
         }
 
-        protected override void OnLoad()
+        //private void Buffers(int VBO, int VAO, int textureVBO, int EBO, int textureID, string path)
+        //{
+        //    //загрузка текстуры
+        //    textureID = GL.GenTexture();
+        //    GL.ActiveTexture(TextureUnit.Texture0);
+        //    GL.BindTexture(TextureTarget.Texture2D, textureID);
+
+        //    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+        //    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+        //    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
+        //    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+        //    StbImage.stbi_set_flip_vertically_on_load(0);
+            
+        //    ImageResult boxTexture = ImageResult.FromStream(File.OpenRead(path),
+        //        ColorComponents.RedGreenBlueAlpha);
+        //    GL.TexImage2D(TextureTarget.Texture2D, 0,
+        //        PixelInternalFormat.Rgba, boxTexture.Width, boxTexture.Height, 0,
+        //        PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture.Data);
+
+        //    GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+
+        //    GL.BindTexture(TextureTarget.Texture2D, 0);
+
+
+
+
+        //    VAO = GL.GenVertexArray();
+        //    GL.BindVertexArray(VAO);
+
+        //    VBO = GL.GenBuffer();
+        //    GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
+        //    GL.BufferData(BufferTarget.ArrayBuffer, sphereVertices.Count * Vector3.SizeInBytes, sphereVertices.ToArray(), BufferUsageHint.StaticDraw);
+        //    GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0); // location = 0
+        //    GL.EnableVertexAttribArray(0);
+
+
+        //    textureVBO = GL.GenBuffer();
+        //    GL.BindBuffer(BufferTarget.ArrayBuffer, textureVBO);
+        //    GL.BufferData(BufferTarget.ArrayBuffer, sphereTexCoords.Count * Vector2.SizeInBytes, sphereTexCoords.ToArray(), BufferUsageHint.StaticDraw);
+        //    GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, 0); // location = 1
+        //    GL.EnableVertexAttribArray(1);
+
+
+        //    // EBO для индексов
+        //    EBO = GL.GenBuffer();
+        //    GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO); // Привязываем EBO
+        //    GL.BufferData(BufferTarget.ElementArrayBuffer, sphereIndices.Count * sizeof(uint),
+        //        sphereIndices.ToArray(), BufferUsageHint.StaticDraw);
+        //    // --- EBO остается привязанным, пока VAO привязан ---
+
+        //    // --- Отвязка ---
+        //     // Отвязываем VAO (сохраняет состояние VBO и EBO)
+
+            
+        //}
+
+        //private void Binding(int VBO, int VAO, int textureVBO, int EBO, int textureID)
+        //{
+        //    GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+        //    GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+        //    GL.BindTexture(TextureTarget.Texture2D, 0);
+        //}
+
+        private int Loadtexture(string path)
         {
-            base.OnLoad();
-
-            GenerateSphere(0.5f, out sphereVertices, out sphereTexCoords, out sphereIndices, 36, 18);
-
-            //загрузка текстуры
-            textureID = GL.GenTexture();
+            int textureID = GL.GenTexture();
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, textureID);
 
@@ -269,8 +329,8 @@ namespace lab2_ver2
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
             StbImage.stbi_set_flip_vertically_on_load(0);
-        ImageResult boxTexture = ImageResult.FromStream(File.OpenRead("../../../Textures/photo.jpg"),
-            ColorComponents.RedGreenBlueAlpha);
+            ImageResult boxTexture = ImageResult.FromStream(File.OpenRead(path),
+                ColorComponents.RedGreenBlueAlpha);
             GL.TexImage2D(TextureTarget.Texture2D, 0,
                 PixelInternalFormat.Rgba, boxTexture.Width, boxTexture.Height, 0,
                 PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture.Data);
@@ -281,8 +341,47 @@ namespace lab2_ver2
 
             GL.BindTexture(TextureTarget.Texture2D, 0);
 
-        
+            return textureID;
+        }
+        protected override void OnLoad()
+        {
+            base.OnLoad();
+            
+            GenerateSphere(0.5f, out sphereVertices, out sphereTexCoords, out sphereIndices, 36, 18);
 
+            //Buffers(VBO, VAO, textureVBO, EBO, textureID, "../../../Textures/photo.jpg");
+            //GL.BindVertexArray(0);
+
+
+            //Buffers(roadVBO, roadVAO, roadtextureVBO, roadEBO, roadtextureID, "../../../Textures/labirint2.jpg");
+
+            //загрузка текстуры
+            //textureID = GL.GenTexture();
+            //GL.ActiveTexture(TextureUnit.Texture0);
+            //GL.BindTexture(TextureTarget.Texture2D, textureID);
+
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            //StbImage.stbi_set_flip_vertically_on_load(0);
+            //ImageResult boxTexture = ImageResult.FromStream(File.OpenRead("../../../Textures/photo.jpg"),
+            //    ColorComponents.RedGreenBlueAlpha);
+            //GL.TexImage2D(TextureTarget.Texture2D, 0,
+            //    PixelInternalFormat.Rgba, boxTexture.Width, boxTexture.Height, 0,
+            //    PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture.Data);
+
+            //GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);//генерирует мипмап-уровни для текстуры.
+            //                                                  //Это набор уменьшенных копий текстуры.
+            //                                                  // Улучшает качество (убирает муар) и производительность.
+
+            //GL.BindTexture(TextureTarget.Texture2D, 0);
+
+
+            //**************************************************************************************
+            
+            this.textureID = Loadtexture("../../../Textures/photo.jpg");
 
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
@@ -304,7 +403,7 @@ namespace lab2_ver2
             // EBO для индексов
             EBO = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO); // Привязываем EBO
-            GL.BufferData(BufferTarget.ElementArrayBuffer, sphereIndices.Count * sizeof(uint), 
+            GL.BufferData(BufferTarget.ElementArrayBuffer, sphereIndices.Count * sizeof(uint),
                 sphereIndices.ToArray(), BufferUsageHint.StaticDraw);
             // --- EBO остается привязанным, пока VAO привязан ---
 
@@ -314,24 +413,28 @@ namespace lab2_ver2
 
 
             //**************ROAD*************
+
             GenerateRoad(30.0f, -0.51f, out roadVertices, out roadTexCoords, out roadIndices);
-            roadtextureID = GL.GenTexture();
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2D, roadtextureID);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            this.roadtextureID = Loadtexture("../../../Textures/labirint2.jpg");
 
-            StbImage.stbi_set_flip_vertically_on_load(0);
+            //roadtextureID = GL.GenTexture();
+            //GL.ActiveTexture(TextureUnit.Texture1);
+            //GL.BindTexture(TextureTarget.Texture2D, roadtextureID);
 
-            ImageResult boxTexture2 = ImageResult.FromStream(File.OpenRead("../../../Textures/labirint2.jpg"),
-                ColorComponents.RedGreenBlueAlpha);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba, boxTexture2.Width, boxTexture2.Height, 0,
-                PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture2.Data);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear); // Лучше для мипмапов
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            //StbImage.stbi_set_flip_vertically_on_load(0);
+
+            //ImageResult boxTexture2 = ImageResult.FromStream(File.OpenRead("../../../Textures/labirint2.jpg"),
+            //    ColorComponents.RedGreenBlueAlpha);
+            //GL.TexImage2D(TextureTarget.Texture2D, 0,
+            //    PixelInternalFormat.Rgba, boxTexture2.Width, boxTexture2.Height, 0,
+            //    PixelFormat.Rgba, PixelType.UnsignedByte, boxTexture2.Data);
+            //GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 
             roadVAO = GL.GenVertexArray();
             GL.BindVertexArray(roadVAO);
@@ -357,6 +460,9 @@ namespace lab2_ver2
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
             GL.BindTexture(TextureTarget.Texture2D, 0);
+
+            //Binding(VBO, VAO, textureVBO, EBO, textureID);
+
 
             shader = new Shader();
             shader.LoadShader();
