@@ -14,11 +14,7 @@ namespace lab2_ver2
         private int SCREENWIDTH;
         private int SCREENHEIGHT;
         private float SENSITIVITY = 0.005f; 
-        //public Vector3 position;
         Vector3 up = Vector3.UnitY;
-        public Vector3 front = -Vector3.UnitZ;
-        public Vector3 right = Vector3.UnitX;
-       
         public Vector2 lastPos;
         private float distance = 4.0f; // Дистанция до цели по умолчанию
         // Углы, определяющие положение камеры относительно цели
@@ -28,7 +24,6 @@ namespace lab2_ver2
         // Ограничения вертикального угла (pitch)
         private const float MIN_PITCH = -MathHelper.PiOver2 + 0.1f; // Примерно -85 градусов
         private const float MAX_PITCH = MathHelper.PiOver2 - 0.1f; // Примерно +85 градусов
-        public bool IsRotationLocked { get; private set; } = false;
 
 
 
@@ -41,18 +36,13 @@ namespace lab2_ver2
             lastPos = new Vector2(width / 2.0f, height / 2.0f);
         }
 
-        public void ToggleRotationLock()
-        {
-            IsRotationLocked = !IsRotationLocked;
-            
-        }
         // Вычисляет позицию камеры на основе углов орбиты и положения цели
         private Vector3 CalculatePosition(Vector3 targetPosition)
         {
             // Расчет смещений по осям на основе сферических координат
-            float offsetX = distance * MathF.Cos(orbitPitch) * MathF.Sin(orbitYaw);
+            float offsetX = distance * MathF.Cos(orbitPitch) * MathF.Cos(orbitYaw);
             float offsetY = distance * MathF.Sin(orbitPitch);
-            float offsetZ = distance * MathF.Cos(orbitPitch) * MathF.Cos(orbitYaw);
+            float offsetZ = distance * MathF.Cos(orbitPitch) * MathF.Sin(orbitYaw);
            
             return targetPosition + new Vector3(offsetX, offsetY, offsetZ);
         }
@@ -81,7 +71,7 @@ namespace lab2_ver2
         }
 
 
-        public void UpdateOrbit(MouseState mouse, FrameEventArgs e, Vector2i windowSize)
+        public void UpdateRotation(MouseState mouse, FrameEventArgs e, Vector2i windowSize)
         {
 
             int winWidth = windowSize.X;
@@ -97,7 +87,7 @@ namespace lab2_ver2
             var deltaY = mouse.Y - lastPos.Y;
 
             // Обновляем углы ТОЛЬКО если вращение НЕ заблокировано И мышь ВНУТРИ окна
-            if (!IsRotationLocked && mouseInside)
+            if (mouse.IsButtonDown(MouseButton.Left) && mouseInside)
             {
                 // Yaw (рыскание) - горизонтальное вращение
                 orbitYaw += deltaX * SENSITIVITY;
@@ -113,17 +103,14 @@ namespace lab2_ver2
             // или при начале движения после паузы.
             lastPos = new Vector2(mouse.X, mouse.Y);
 
-
-            //pitch = Clamp(pitch, -89.0f, 89.0f); 
-
-            //UpdateVectors();
-
         }
         public void Update(MouseState mouse, FrameEventArgs e, Vector2i windowSize)
         {
-            UpdateOrbit(mouse, e, windowSize);
+            UpdateRotation(mouse, e, windowSize);
+            distance -= mouse.ScrollDelta.Y * 0.1f; // Пример масштабирования
+            distance = Math.Max(1.0f, distance); // Ограничение минимальной дистанции
         }
 
-        
+
     }
 }
