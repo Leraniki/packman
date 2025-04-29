@@ -14,12 +14,12 @@ namespace lab2_ver2
         private int SCREENWIDTH;
         private int SCREENHEIGHT;
         private float SENSITIVITY = 0.005f; 
-        Vector3 up = Vector3.UnitY;
-        public Vector2 lastPos;
-        private float distance = 4.0f; // Дистанция до цели по умолчанию
-        // Углы, определяющие положение камеры относительно цели
-        private float orbitYaw = -MathHelper.PiOver2; // Горизонтальный угол: Начать позади цели (вдоль -Z)
-        private float orbitPitch = MathHelper.DegreesToRadians(15f); // Вертикальный угол: Начать немного приподнято
+        Vector3 up = Vector3.UnitY; // Вектор "вверх" для камеры
+        public Vector2 lastPos; //Последняя известная позиция курсора мыши
+        private float distance = 4.0f; // Дистанция от камеры до точки, вокруг которой она вращается
+        // Углы, определяющие положение камеры относительно точки
+        private float orbitYaw = -MathHelper.PiOver2; //камера изначально смотрит вдоль отрицательной оси Z.Горизонтальный угол
+        private float orbitPitch = MathHelper.DegreesToRadians(15f); // небольшой наклон камеры вверх. Вертикальный угол.
 
         // Ограничения вертикального угла (pitch)
         private const float MIN_PITCH = -MathHelper.PiOver2 + 0.1f; // Примерно -85 градусов
@@ -31,8 +31,8 @@ namespace lab2_ver2
         {
             SCREENWIDTH = width;
             SCREENHEIGHT = height;
-            distance = initialDistance;
-            // Инициализация lastPos начальными координатами центра экрана
+            distance = initialDistance; 
+            // Инициализация lastPos начальными координатами центра экрана, чтобы не было прыжка при первом движении мыши
             lastPos = new Vector2(width / 2.0f, height / 2.0f);
         }
 
@@ -43,7 +43,8 @@ namespace lab2_ver2
             float offsetX = distance * MathF.Cos(orbitPitch) * MathF.Cos(orbitYaw);
             float offsetY = distance * MathF.Sin(orbitPitch);
             float offsetZ = distance * MathF.Cos(orbitPitch) * MathF.Sin(orbitYaw);
-           
+
+            // Позиция камеры = позиция цели + вычисленное смещени
             return targetPosition + new Vector3(offsetX, offsetY, offsetZ);
         }
 
@@ -57,12 +58,13 @@ namespace lab2_ver2
         }
         public Matrix4 GetProjectionMatrix()
         {
+            //Вычисляем соотношение сторон экрана.
             float aspectRatio = SCREENHEIGHT > 0 ? (float)SCREENWIDTH / SCREENHEIGHT : 1.0f;
-             return Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), // Угол обзора поменьше
+            return Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), 
                  aspectRatio, 0.1f, 100f);
         }
 
-        // Новый метод для обновления размеров экрана при ресайзе
+        //метод для обновления размеров экрана при ресайзе
         public void UpdateScreenSize(int width, int height)
         {
              SCREENWIDTH = width;
@@ -70,13 +72,15 @@ namespace lab2_ver2
              
         }
 
-
+        // Обрабатывает вращение камеры на основе ввода мыши.
+        // mouse: текущее состояние мыши.
         public void UpdateRotation(MouseState mouse, FrameEventArgs e, Vector2i windowSize)
         {
 
             int winWidth = windowSize.X;
             int winHeight = windowSize.Y;
 
+            // Проверяем, находится ли курсор мыши внутри окна
             bool mouseInside = mouse.X > 0 && mouse.X < winWidth - 1 &&
                                mouse.Y > 0 && mouse.Y < winHeight - 1;
 
@@ -95,7 +99,7 @@ namespace lab2_ver2
                 // Pitch (тангаж) - вертикальное вращение
                 orbitPitch -= deltaY * SENSITIVITY;
 
-                // Ограничиваем вертикальный угол (pitch)
+                // Ограничиваем вертикальный угол (pitch), чтобы избежать "переворота" камеры и проблем с матрицей LookAt.
                 orbitPitch = MathHelper.Clamp(orbitPitch, MIN_PITCH, MAX_PITCH);
             }
 
@@ -104,11 +108,13 @@ namespace lab2_ver2
             lastPos = new Vector2(mouse.X, mouse.Y);
 
         }
+
+        // Общий метод обновления состояния камеры, вызываемый каждый кадр.
         public void Update(MouseState mouse, FrameEventArgs e, Vector2i windowSize)
         {
             UpdateRotation(mouse, e, windowSize);
-            distance -= mouse.ScrollDelta.Y * 0.1f; // Пример масштабирования
-            distance = Math.Max(1.0f, distance); // Ограничение минимальной дистанции
+            distance -= mouse.ScrollDelta.Y * 0.1f; //Обновляем дистанцию до цели на основе прокрутки колесика мыши
+            distance = Math.Max(1.0f, distance); // Ограничение минимальной дистанции, чтобы камера не "прошла" сквозь цель
         }
 
 

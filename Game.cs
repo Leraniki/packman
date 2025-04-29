@@ -85,14 +85,14 @@ namespace lab2_ver2
                 Console.WriteLine(infoLog);
             }
 
-            GL.AttachShader(shaderHandle, vertexShader);
+            GL.AttachShader(shaderHandle, vertexShader); // Прикрепляет вершинный шейдер к программе
             GL.AttachShader(shaderHandle, fragmentShader);
             GL.LinkProgram(shaderHandle);
 
 
-            GL.DetachShader(shaderHandle, vertexShader);
+            GL.DetachShader(shaderHandle, vertexShader); // Отсоединяет шейдер
             GL.DetachShader(shaderHandle, fragmentShader);
-            GL.DeleteShader(vertexShader);
+            GL.DeleteShader(vertexShader); // Удаляет объект вершинного шейдера
             GL.DeleteShader(fragmentShader);
         }
 
@@ -123,7 +123,7 @@ namespace lab2_ver2
 
         List<Vector3> mazeVertices;
         List<Vector2> mazeTexCoords;
-        List<uint> mazeIndices;
+        List<uint> mazeIndices; // индексы для сборки треугольников стен
 
         int mazeVAO;
         int mazeVBO;
@@ -149,6 +149,10 @@ namespace lab2_ver2
 
         int textureID;
         int textureVBO;
+
+        int noisetextureID;
+        private int applyNoiseLocation = -1;
+
 
         //Призраки
         List<Vector3> ghostPositions = new List<Vector3>();
@@ -216,27 +220,27 @@ namespace lab2_ver2
             indices = new List<uint>();
 
             float x, y, z, xy;  //хранение координат текущей вершины. xy -- проекция радиуса
-                                //float nx, ny, nz, lengthInv = 1.0f / radius; // нормали
-            float s, t; // //хранения текстурных координат. t-- vertikal, s -- gorizont
+            float s, t; //хранения текстурных координат. t-- vertikal, s -- gorizont
             float sectorStep = 2 * MathF.PI / sectorCount; // угловой шаг между секторами
             float stackStep = MathF.PI / stackCount; //угловой шаг между слоями
             float sectorAngle, stackAngle;// текущий угол сектора и слоя
 
             for (int i = 0; i <= stackCount; i++) // от верхнего полюса к нижнему. по слоям ()
             {
-                stackAngle = MathF.PI / 2 - i * stackStep;
-                xy = radius * MathF.Cos(stackAngle);
+                stackAngle = MathF.PI / 2 - i * stackStep; // Текущий угол широты
+                xy = radius * MathF.Cos(stackAngle); // Радиус окружности на текущем слое.
                 z = radius * MathF.Sin(stackAngle);
 
                 // по секторам
                 for (int j = 0; j <= sectorCount; j++)
                 {
-                    sectorAngle = j * sectorStep;
+                    sectorAngle = j * sectorStep; // Текущий угол долготы
 
                     x = xy * MathF.Cos(sectorAngle);
                     y = xy * MathF.Sin(sectorAngle);
                     vertices.Add(new Vector3(x, z, y));
 
+                    // Вычисление текстурных координат.
                     s = (float)j / sectorCount;
                     t = (float)i / stackCount;
 
@@ -247,11 +251,14 @@ namespace lab2_ver2
             }
 
             // Генерация индексов для сборки треугольников.
+            // Мы обходим сетку четырехугольников, образованную вершинами, и создаем по два треугольника для каждого.
+            // now - индекс вершины на текущем слое 'i' и текущем секторе 'j'
+            // next - индекс вершины на следующем слое 'i+1' и текущем секторе 'j'
             uint now, next; //хранения индексов вершин на текущем и следующем слоях.
 
             for (int i = 0; i < stackCount; i++)
             {
-                now = (uint)(i * (sectorCount + 1));
+                now = (uint)(i * (sectorCount + 1)); // Индекс первой вершины на текущем слое.
                 next = (uint)(now + (sectorCount + 1));
 
                 for (int j = 0; j < sectorCount; ++j, ++now, ++next)
@@ -260,23 +267,23 @@ namespace lab2_ver2
 
                     // Первый треугольник: (текущий слой, текущий сектор) -> (след. слой, текущий сектор)
                     // -> (текущий слой, след. сектор)
-                    if (i != 0)
+                    if (i != 0) // Пропускаем треугольники, примыкающие к самому верхнему полюсу.
                     { // Не создаем треугольники, примыкающие к самому верхнему полюсу
 
-                        //полюс
-                        indices.Add(now);
-                        indices.Add(next);
-                        indices.Add(now + 1);
+                        
+                        indices.Add(now); // Верхний левый угол четырехугольника.
+                        indices.Add(next); // Нижний левый угол.
+                        indices.Add(now + 1); // Верхний правый угол.
                     }
 
-                    //2 треуголбник. (текущий слой, след. сектор) -> (след. слой, текущий сектор)
+                    //2 треугольник. (текущий слой, след. сектор) -> (след. слой, текущий сектор)
                     //-> (след. слой, след. сектор)
-                    if (i != (stackCount - 1))
+                    if (i != (stackCount - 1)) // Пропускаем треугольники, примыкающие к самому нижнему полюсу.
                     {
 
-                        indices.Add(now + 1);
-                        indices.Add(next);
-                        indices.Add(next + 1);
+                        indices.Add(now + 1); // Верхний правый угол.
+                        indices.Add(next); // Нижний левый угол.
+                        indices.Add(next + 1);  // Нижний правый угол.
 
                     }
                 }
@@ -291,28 +298,28 @@ namespace lab2_ver2
             float halfSize = size / 2.0f;
 
             vertices = new List<Vector3>
-        {
-        new Vector3(-halfSize, yLevel, -halfSize), // Нижний левый
-        new Vector3( halfSize, yLevel, -halfSize), // Нижний правый
-        new Vector3( halfSize, yLevel,  halfSize), // Верхний правый
-        new Vector3(-halfSize, yLevel,  halfSize)  // Верхний левый
-        };
+            {
+                new Vector3(-halfSize, yLevel, -halfSize), // Нижний левый
+                new Vector3( halfSize, yLevel, -halfSize), // Нижний правый
+                new Vector3( halfSize, yLevel,  halfSize), // Верхний правый
+                new Vector3(-halfSize, yLevel,  halfSize)  // Верхний левый
+            };
 
 
             texCoords = new List<Vector2>
-        {
-        new Vector2(0.0f, 0.0f),
-        new Vector2(1.0f, 0.0f),
-        new Vector2(1.0f, 1.0f),
-        new Vector2(0.0f, 1.0f)
-        };
+            {
+                new Vector2(0.0f, 0.0f),
+                new Vector2(1.0f, 0.0f),
+                new Vector2(1.0f, 1.0f),
+                new Vector2(0.0f, 1.0f)
+            };
 
             // Индексы для двух треугольников
             indices = new List<uint>
-        {
-        0, 1, 2,  // Первый треугольник
-        0, 2, 3   // Второй треугольник
-        };
+            {
+                0, 1, 2,  // Первый треугольник
+                0, 2, 3   // Второй треугольник
+            };
 
         }
 
@@ -325,24 +332,27 @@ namespace lab2_ver2
 
             int rows = layout.GetLength(0);
             int cols = layout.GetLength(1);
-
-            float offsetX = -cols / 2.0f * cellSize; // смещение
+            
+            // Вычисление смещений для центрирования лабиринта относительно начала координат (0,0,0)
+            float offsetX = -cols / 2.0f * cellSize; 
             float offsetZ = -rows / 2.0f * cellSize;
 
             uint vertexCount = 0; // Будем считать добавленные вершины
 
-            // Стандартные UV-координаты для квадрата
+            // Стандартные UV-координаты для квадратной грани
             Vector2 uv00 = new Vector2(0.0f, 0.0f);
             Vector2 uv10 = new Vector2(1.0f, 0.0f);
             Vector2 uv01 = new Vector2(0.0f, 1.0f);
             Vector2 uv11 = new Vector2(1.0f, 1.0f);
 
+            // Итерация по каждой клетке в массиве layout.
             for (int r = 0; r < rows; r++)
             {
                 for (int c = 0; c < cols; c++)
                 {
                     if (layout[r, c] == 'W') // Если это стена
                     {
+                        // Вычисляем мировые координаты нижнего переднего левого угла этого куба
                         float worldX = offsetX + c * cellSize;
                         float worldZ = offsetZ + r * cellSize;
                         float worldY = floorY;
@@ -357,7 +367,8 @@ namespace lab2_ver2
                         Vector3 p6 = new Vector3(worldX + cellSize, worldY + wallHeight, worldZ + cellSize);
                         Vector3 p7 = new Vector3(worldX, worldY + wallHeight, worldZ + cellSize);
 
-                        // Добавляем 24 вершины (по 4 на грань) и 24 UV
+                        // Добавляем вершины, текстурные координаты и индексы для каждой из 6 граней.
+                        // Каждая грань состоит из 4 вершин и 2 треугольников (6 индексов).
 
                         // Передняя грань (+Z направление в OpenGL каноническом виде, но -Z в нашем мире)
                         vertices.Add(p0); texCoords.Add(uv00); // Нижний левый
@@ -428,9 +439,9 @@ namespace lab2_ver2
             float startOffsetX = -mazeCols / 2.0f * mazeCellSize;
             float startOffsetZ = -mazeRows / 2.0f * mazeCellSize;
 
-            // Находим диапазон клеток сетки, которые могут пересекаться с Пакманом
-            int minCol = (int)Math.Floor((minX - startOffsetX) / mazeCellSize);
-            int maxCol = (int)Math.Floor((maxX - startOffsetX) / mazeCellSize);
+            // Находим диапазон клеток сетки, которые могут пересекаться с Пакманом. Проверяем только  там, где находится пакмен.
+            int minCol = (int)Math.Floor((minX - startOffsetX) / mazeCellSize); //Какой индекс самой левой колонки в сетке лабиринта сейчас касается Пакман?
+            int maxCol = (int)Math.Floor((maxX - startOffsetX) / mazeCellSize); 
             int minRow = (int)Math.Floor((minZ - startOffsetZ) / mazeCellSize);
             int maxRow = (int)Math.Floor((maxZ - startOffsetZ) / mazeCellSize);
 
@@ -442,7 +453,7 @@ namespace lab2_ver2
                     // Проверяем, находится ли клетка в пределах лабиринта
                     if (r < 0 || r >= mazeRows || c < 0 || c >= mazeCols)
                     {
-                        continue; 
+                        return true; 
                     }
 
                     // Если клетка является стеной ('W'), то произошло столкновение
@@ -541,6 +552,7 @@ namespace lab2_ver2
             sphereCenterCoords = new Vector3(0, 0, 0);
 
             this.textureID = Loadtexture("../../../Textures/packman.jpg");
+            this.noisetextureID = Loadtexture("../../../Textures/noise.jpg");
             this.VAO = VAOBuf(VAO);
             GL.BindVertexArray(this.VAO);
             this.VBO = VBOBuf(VBO, sphereVertices);
@@ -591,9 +603,7 @@ namespace lab2_ver2
             }
 
             //*******************Призраки********************
-            float ghostY = 0.0f;
-
-     
+            
             string[] ghostTexturePaths = {
             "../../../Textures/red.jpg",    
             "../../../Textures/pink.jpg",   
@@ -603,6 +613,7 @@ namespace lab2_ver2
 
             initialGhostCount = ghostTexturePaths.Length; // Сохраняем изначальное кол-во призраков
             initialGhostTextureIDs.Clear(); // Чистим перед загрузкой
+            //загружаем текстуру каждого призрака   
             foreach (var path in ghostTexturePaths)
             {
                 int texID = Loadtexture(path);
@@ -615,10 +626,13 @@ namespace lab2_ver2
 
             // Генерируем позиции призраков
             ghostPositions.Clear(); 
-            float minSpawnDistSq = (mazeCellSize * 2.0f) * (mazeCellSize * 2.0f); // Мин. кв. дистанция от Пакмана
+            float minSpawnDistSq = (mazeCellSize * 2.0f) * (mazeCellSize * 2.0f); // Мин. кв. дистанция от Пакмана. Использование квадрата избегает вызова Math.Sqrt().
 
+            // Создает КОПИЮ списка пустых ячеек, доступных для спавна призраков.
+            // Копирование важно, т.к. мы будем удалять ячейки из этого списка при спавне.
             List<Vector2i> availableSpawnCells = new List<Vector2i>(emptyCells);
 
+            //размещаем призраков
             for (int i = 0; i < ghostTextureIDs.Count; i++)
             {
                 if (availableSpawnCells.Count == 0)
@@ -627,10 +641,10 @@ namespace lab2_ver2
                     break; 
                 }
 
-                int retryCount = 0;
+                int retryCount = 0; // Счетчик попыток найти позицию для текущего призрака.
                 const int maxRetries = 10; 
-                Vector3 potentialPos = Vector3.Zero;
-                Vector2i chosenCell = Vector2i.Zero;
+                Vector3 potentialPos = Vector3.Zero;  // Потенциальная мировая позиция.
+                Vector2i chosenCell = Vector2i.Zero; // Выбранная ячейка сетки.
 
                 do
                 {
@@ -639,7 +653,9 @@ namespace lab2_ver2
                         retryCount = maxRetries; 
                         break;
                     }
+                    // Выбирает случайный индекс из списка доступных ячеек.
                     int randomIndex = random.Next(availableSpawnCells.Count);
+                    // Получает координаты выбранной ячейки.
                     chosenCell = availableSpawnCells[randomIndex];
 
                     // Вычисляем мировую позицию
@@ -670,8 +686,9 @@ namespace lab2_ver2
                 else
                 {
                     Console.WriteLine("Could not find suitable spawn location for ghost {i} after {maxRetries} retries.");
-                    if (availableSpawnCells.Count > 0)
+                    if (availableSpawnCells.Count > 0) // Проверяем, остались ли хоть какие-то клетки.
                     {
+                        // Выбираем случайную из оставшихся.
                         int fallbackIndex = random.Next(availableSpawnCells.Count);
                         chosenCell = availableSpawnCells[fallbackIndex];
                         potentialPos = new Vector3(
@@ -729,8 +746,9 @@ namespace lab2_ver2
             camera = new Camera(Size.X, Size.Y, cameraDistance);
 
             PlaceObjects();
-            //CursorState = CursorState.Grabbed;
+            
         }
+
         // Метод для начального размещения и сброса
         private void PlaceObjects()
         {
@@ -743,7 +761,7 @@ namespace lab2_ver2
             int mazeCols = mazeLayout.GetLength(1);
             float startOffsetX = -mazeCols / 2.0f * mazeCellSize;
             float startOffsetZ = -mazeRows / 2.0f * mazeCellSize;
-            float objectYLevel = 0.3f; // Уровень Y для Пакмана, призраков, коллектиблов
+            float objectYLevel = 0.3f; // Уровень Y для Пакмана, призраков, еды
 
             List<Vector2i> emptyCells = new List<Vector2i>();
             for (int r = 0; r < mazeRows; r++)
@@ -777,10 +795,10 @@ namespace lab2_ver2
             Console.WriteLine($"Pacman start position set to: {sphereCenterCoords}");
 
 
-            // --- Размещение Коллектиблов ---
+            // --- Размещение еды ---
             totalfood = 0;
             foodEaten = 0;
-            // Размещаем коллектибл в КАЖДОЙ оставшейся пустой клетке
+            // Размещаем еду в КАЖДОЙ оставшейся пустой клетке
             foreach (var cell in emptyCells)
             {
                 Vector3 pos = new Vector3(
@@ -788,7 +806,7 @@ namespace lab2_ver2
                     objectYLevel,
                     startOffsetZ + (cell.Y + 0.5f) * mazeCellSize
                 );
-                food.Add(new Food { Position = pos, IsEaten = false });
+                food.Add(new Food { Position = pos, IsEaten = false });  // Добавляем новый объект Food в список
                 totalfood++;
             }
             Console.WriteLine($"Spawned {totalfood} collectibles.");
@@ -800,19 +818,21 @@ namespace lab2_ver2
 
             ghostTextureIDs.AddRange(initialGhostTextureIDs); // Копируем текстуры для текущей игры
 
+            // Пытаемся разместить каждого призрака.
             for (int i = 0; i < initialGhostCount; i++)
             {
                 if (availableSpawnCells.Count == 0) break; // Если клетки кончились
 
-                Vector2i chosenCell = Vector2i.Zero;
-                Vector3 potentialPos = Vector3.Zero;
+                Vector2i chosenCell = Vector2i.Zero;  // Клетка, выбранная для спавна.
+                Vector3 potentialPos = Vector3.Zero; // Мировая позиция в этой клетке.
                 bool positionFound = false;
-                int attempts = 0;
+                int attempts = 0; // Счетчик попыток найти место.
                 const int maxAttempts = 20;
 
+                // Цикл поиска подходящей клетки.   
                 while (attempts < maxAttempts && availableSpawnCells.Count > 0)
                 {
-                    int randomIndex = random.Next(availableSpawnCells.Count);
+                    int randomIndex = random.Next(availableSpawnCells.Count); // Выбираем случайную доступную клетку.
                     chosenCell = availableSpawnCells[randomIndex];
                     potentialPos = new Vector3(
                         startOffsetX + (chosenCell.X + 0.5f) * mazeCellSize,
@@ -820,9 +840,9 @@ namespace lab2_ver2
                         startOffsetZ + (chosenCell.Y + 0.5f) * mazeCellSize
                     );
 
-                    // Убедимся, что не спавнимся слишком близко к пакману И на месте коллектибла
+                    // Убедимся, что не спавнимся слишком близко к пакману И на месте еды
                     bool overlapsfood = false;
-                    foreach (var coll in food)
+                    foreach (var coll in food) // Проходим по списку еды
                     {
                         if (Vector3.DistanceSquared(potentialPos, coll.Position) < 0.1f) // Маленький допуск
                         {
@@ -854,7 +874,7 @@ namespace lab2_ver2
                     Console.WriteLine($"Warning: Could not find ideal spawn for ghost {i}. Placing randomly.");
                     if (emptyCells.Count > 0) // Берем любую оставшуюся пустую клетку
                     {
-                        int fallbackIndex = random.Next(emptyCells.Count);
+                        int fallbackIndex = random.Next(emptyCells.Count); // Берем случайную из оставшихся пустых.
                         Vector2i fallbackCell = emptyCells[fallbackIndex];
                         potentialPos = new Vector3(
                            startOffsetX + (fallbackCell.X + 0.5f) * mazeCellSize,
@@ -862,7 +882,7 @@ namespace lab2_ver2
                            startOffsetZ + (fallbackCell.Y + 0.5f) * mazeCellSize
                        );
                         ghostPositions.Add(potentialPos);
-                        initialGhostPositions.Add(potentialPos);
+                        initialGhostPositions.Add(potentialPos); // Сохраняем как начальную.
                         emptyCells.RemoveAt(fallbackIndex); // Убираем использованную клетку
                         Console.WriteLine($"Ghost {i} fallback spawn at cell ({fallbackCell.X},{fallbackCell.Y}): {potentialPos}");
                     }
@@ -913,6 +933,7 @@ namespace lab2_ver2
 
             DelBuf(mazeVAO, mazeVBO, mazeVBO, mazeEBO, mazeTextureID);
 
+            GL.DeleteTexture(noisetextureID);
             shader.DeleteShader();
         }
 
@@ -921,6 +942,8 @@ namespace lab2_ver2
 
             base.OnRenderFrame(args);
 
+
+            // Очистка буферов цвета и глубины перед отрисовкой нового кадра.
             GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -932,36 +955,56 @@ namespace lab2_ver2
             int modelLocation = GL.GetUniformLocation(shader.GetShader(), "model");
             int viewLocation = GL.GetUniformLocation(shader.GetShader(), "view");
             int projectionLocation = GL.GetUniformLocation(shader.GetShader(), "projection");
-            int texUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture0"); 
+            int texUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture0");
+            int noisetexUniformLocation = GL.GetUniformLocation(shader.GetShader(), "texture1");
+            applyNoiseLocation = GL.GetUniformLocation(shader.GetShader(), "applyNoise");
 
+            // Передаем матрицы проекции и вида в шейдер.
             GL.UniformMatrix4(projectionLocation, false, ref projection);
             GL.UniformMatrix4(viewLocation, false, ref view);
 
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.Uniform1(texUniformLocation, 0); 
+            // Указываем шейдеру, какой текстурный юнит использовать для каждого сэмплера.
+            GL.Uniform1(texUniformLocation, 0);
+            GL.Uniform1(noisetexUniformLocation, 1);
 
             //*********************Рендеринг Пакмана****************************
+            // Вычисляем текущий угол рта для анимации.
             float currentMouthAngle = (MathF.Sin(mouthTimer * mouthSpeed) + 1.0f) / 2.0f * maxMouthAngle;
+            // Передаем вычисленный угол в шейдер, если location был найден.
             if (mouthAngleLocation != -1)
             {
                 GL.Uniform1(mouthAngleLocation, currentMouthAngle);
             }
 
+            // Устанавливаем флаг applyNoise для Пакмана
+            if (applyNoiseLocation != -1) 
+                GL.Uniform1(applyNoiseLocation, 1);
+
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, textureID); // Текстура Пакмана
 
+            GL.ActiveTexture(TextureUnit.Texture1);
+            if (noisetextureID != 0)  // Проверяем, что текстура шума загружена.
+                GL.BindTexture(TextureTarget.Texture2D, noisetextureID);
+
             Matrix4 pacmanScaleMatrix = Matrix4.CreateScale(pacmanScale);
-            Matrix4 pacmanTranslationMatrix = Matrix4.CreateTranslation(sphereCenterCoords);
+            Matrix4 pacmanTranslationMatrix = Matrix4.CreateTranslation(sphereCenterCoords); // матрица трансляции переносит локальные координаты модели в мировые
             Matrix4 pacmanModel = pacmanScaleMatrix * pacmanTranslationMatrix; // Масштаб ДО переноса
             GL.UniformMatrix4(modelLocation, false, ref pacmanModel);
 
             GL.BindVertexArray(VAO); // VAO Пакмана/Сферы
             GL.DrawElements(PrimitiveType.Triangles, sphereIndices.Count, DrawElementsType.UnsignedInt, 0);
 
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+            GL.ActiveTexture(TextureUnit.Texture0);
             //******************************Рендеринг Призраков************************
             if (mouthAngleLocation != -1)
             {
                 GL.Uniform1(mouthAngleLocation, 0.0f); // Закрытый рот для призраков
             }
+            if (applyNoiseLocation != -1) 
+                GL.Uniform1(applyNoiseLocation, 0);
             for (int i = 0; i < ghostPositions.Count; i++)
             {
                 GL.BindTexture(TextureTarget.Texture2D, ghostTextureIDs[i]); // Текстура призрака
@@ -974,6 +1017,7 @@ namespace lab2_ver2
                 // VAO Пакмана все еще привязан
                 GL.DrawElements(PrimitiveType.Triangles, sphereIndices.Count, DrawElementsType.UnsignedInt, 0);
             }
+            
             
 
 

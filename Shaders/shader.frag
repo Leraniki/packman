@@ -1,34 +1,53 @@
-﻿#version 460 core
+﻿    #version 460 core
 
-out vec4 FragColor;
+    out vec4 FragColor;
 
-in vec2 texCoord;
-in vec3 fragPosModel;
+    in vec2 texCoord;
+    in vec3 fragPosModel;
 
-uniform sampler2D texture0;
-uniform float mouthAngle;
+    uniform sampler2D texture0;
+    uniform sampler2D texture1;
+    uniform bool applyNoise; 
+    uniform float mouthAngle;
 
-const float PI = 3.14159265359;
-const float MOUTH_TALLNESS = 0.8;
+    const float PI = 3.14159265359;
+    const float MOUTH_TALLNESS = 0.8;
 
-void main()
-{
-    float horizontalAngle = atan(fragPosModel.y, fragPosModel.x);
 
-    float y_normalized = clamp(fragPosModel.y / 0.5, -1.0, 1.0);
-    float verticalAngle = asin(y_normalized);
+    void main()
+    {
 
-    bool isHorizontallyInMouth = abs(horizontalAngle) < mouthAngle / 2.0;
+        vec4 baseColor = texture(texture0, texCoord);
+        vec4 noise = texture(texture1, texCoord);
 
-    float maxVerticalAngle = (mouthAngle / 2.0) * MOUTH_TALLNESS * max(0.0, 1.0 - abs(horizontalAngle) / (mouthAngle / 2.0 + 0.0001));
+        float horizontalAngle = atan(fragPosModel.y, fragPosModel.x);
 
-    bool isVerticallyInMouth = abs(verticalAngle) < maxVerticalAngle;
+        float y_normalized = clamp(fragPosModel.y / 0.5, -1.0, 1.0);
+        float verticalAngle = asin(y_normalized);
 
-    bool isInMouth = isHorizontallyInMouth && isVerticallyInMouth;
+        bool isHorizontallyInMouth = abs(horizontalAngle) < mouthAngle / 2.0;
+            
+        float maxVerticalAngle = (mouthAngle / 2.0) * MOUTH_TALLNESS * max(0.0, 1.0 - abs(horizontalAngle) / (mouthAngle / 2.0 + 0.0001));
 
-    if (isInMouth && mouthAngle > 0.001) {
-        discard;
-    }
+        bool isVerticallyInMouth = abs(verticalAngle) < maxVerticalAngle;
 
-    FragColor = texture(texture0, texCoord);
-}
+        bool isInMouth = isHorizontallyInMouth && isVerticallyInMouth;
+
+        if (isInMouth && mouthAngle > 0.001) {
+            discard;
+        }
+
+        vec4 finalColor = baseColor; 
+
+
+        if (applyNoise)
+        {
+            
+            vec4 noise = texture(texture1, texCoord);
+            finalColor = baseColor * noise; 
+        }
+        
+
+        FragColor = finalColor;     
+
+  }
